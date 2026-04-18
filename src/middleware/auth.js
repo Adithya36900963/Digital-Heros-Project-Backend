@@ -13,6 +13,7 @@ export async function requireAuth(req, res, next) {
     const payload = jwt.verify(token, env.jwtSecret);
     const user = await User.findById(payload.sub).select('+passwordHash');
     if (!user || user.status !== 'active') throw new ApiError(401, 'Invalid user session');
+    if (!user.isEmailVerified) throw new ApiError(403, 'Please verify your email before continuing');
 
     req.user = user;
     next();

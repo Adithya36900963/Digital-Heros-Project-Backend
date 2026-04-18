@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { env } from '../config/env.js';
 import { Charity } from '../models/Charity.js';
 import { Donation } from '../models/Donation.js';
+import { Payment } from '../models/Payment.js';
 import { Subscription } from '../models/Subscription.js';
 import { User } from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -107,14 +108,25 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
   const currency = env.currency.toUpperCase();
 
   if (!razorpay) {
+    const payment = await Payment.create({
+      user: req.user._id,
+      provider: 'mock',
+      plan,
+      amount,
+      currency,
+      status: 'created',
+      providerOrderId: `order_mock_${Date.now()}`
+    });
+
     return res.json({
       success: true,
       order: {
         mode: 'mock',
-        id: `order_mock_${Date.now()}`,
+        id: payment.providerOrderId,
         amount,
         currency,
         plan,
+        paymentId: payment._id,
         keyId: env.razorpayKeyId,
         message: 'Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to create a real Razorpay order'
       }
@@ -132,6 +144,17 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     }
   });
 
+  const payment = await Payment.create({
+    user: req.user._id,
+    provider: 'razorpay',
+    plan,
+    amount: order.amount,
+    currency: order.currency,
+    status: 'created',
+    providerOrderId: order.id,
+    rawProviderResponse: order
+  });
+
   res.status(201).json({
     success: true,
     order: {
@@ -139,6 +162,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
       amount: order.amount,
       currency: order.currency,
       plan,
+      paymentId: payment._id,
       keyId: env.razorpayKeyId,
       name: 'Digital Heroes',
       description: `Digital Heroes ${plan} subscription`
@@ -150,12 +174,31 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   if (!razorpay || !env.razorpayKeySecret) throw new ApiError(503, 'Razorpay is not configured');
 
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.validated.body;
+  const payment = await Payment.findOne({
+    user: req.user._id,
+    provider: 'razorpay',
+    providerOrderId: razorpay_order_id
+  });
+
+  if (!payment) throw new ApiError(404, 'Payment order not found for this user');
+  if (payment.status === 'verified' && payment.subscription) {
+    const existingSubscription = await Subscription.findById(payment.subscription).populate('charity');
+    return res.json({ success: true, subscription: existingSubscription, payment });
+  }
+
   const expectedSignature = crypto
     .createHmac('sha256', env.razorpayKeySecret)
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
     .digest('hex');
 
-  if (expectedSignature !== razorpay_signature) throw new ApiError(400, 'Razorpay payment verification failed');
+  if (expectedSignature !== razorpay_signature) {
+    payment.status = 'failed';
+    payment.failureReason = 'Invalid Razorpay signature';
+    payment.providerPaymentId = razorpay_payment_id;
+    payment.providerSignature = razorpay_signature;
+    await payment.save();
+    throw new ApiError(400, 'Razorpay payment verification failed');
+  }
 
   const order = await razorpay.orders.fetch(razorpay_order_id);
   const plan = order.notes?.plan;
@@ -163,6 +206,8 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
 
   if (!['monthly', 'yearly'].includes(plan)) throw new ApiError(400, 'Razorpay order is missing a valid plan');
   if (userId !== req.user._id.toString()) throw new ApiError(403, 'Razorpay order does not belong to this user');
+  if (Number(order.amount) !== Number(payment.amount)) throw new ApiError(400, 'Razorpay order amount does not match payment record');
+  if (String(order.currency).toUpperCase() !== String(payment.currency).toUpperCase()) throw new ApiError(400, 'Razorpay order currency does not match payment record');
 
   const user = await User.findById(req.user._id);
   if (!user) throw new ApiError(404, 'User not found');
@@ -172,7 +217,20 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   subscription.providerCustomerId = razorpay_payment_id;
   await subscription.save();
 
-  res.json({ success: true, subscription });
+  payment.status = 'verified';
+  payment.subscription = subscription._id;
+  payment.providerPaymentId = razorpay_payment_id;
+  payment.providerSignature = razorpay_signature;
+  payment.verifiedAt = new Date();
+  payment.rawProviderResponse = order;
+  await payment.save();
+
+  res.json({ success: true, subscription, payment });
+});
+
+export const myPayments = asyncHandler(async (req, res) => {
+  const payments = await Payment.find({ user: req.user._id }).sort({ createdAt: -1 }).populate('subscription');
+  res.json({ success: true, payments });
 });
 
 export const cancelSubscription = asyncHandler(async (req, res) => {

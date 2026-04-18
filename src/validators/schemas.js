@@ -19,6 +19,16 @@ export const authSchemas = {
       email: z.string().email(),
       password: z.string().min(1)
     })
+  }),
+  verifyEmail: z.object({
+    body: z.object({
+      token: z.string().min(20)
+    })
+  }),
+  resendVerification: z.object({
+    body: z.object({
+      email: z.string().email()
+    })
   })
 };
 

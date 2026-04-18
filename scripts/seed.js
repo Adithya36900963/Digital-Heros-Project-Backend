@@ -7,6 +7,7 @@ import { Score } from '../src/models/Score.js';
 import { Subscription } from '../src/models/Subscription.js';
 import { User } from '../src/models/User.js';
 import { Winner } from '../src/models/Winner.js';
+import { Payment } from '../src/models/Payment.js';
 import { createActiveSubscription } from '../src/controllers/subscriptionController.js';
 
 async function seed() {
@@ -19,7 +20,8 @@ async function seed() {
     Subscription.deleteMany({}),
     Donation.deleteMany({}),
     Draw.deleteMany({}),
-    Winner.deleteMany({})
+    Winner.deleteMany({}),
+    Payment.deleteMany({})
   ]);
 
   const charities = await Charity.insertMany([
@@ -52,6 +54,8 @@ async function seed() {
       email: 'admin@digitalheroes.local',
       passwordHash: await User.hashPassword('Admin123!'),
       role: 'admin',
+      isEmailVerified: true,
+      emailVerifiedAt: new Date(),
       selectedCharity: charities[0]._id,
       charityContributionPercentage: 10
     },
@@ -60,6 +64,8 @@ async function seed() {
       email: 'user@digitalheroes.local',
       passwordHash: await User.hashPassword('User123!'),
       role: 'subscriber',
+      isEmailVerified: true,
+      emailVerifiedAt: new Date(),
       selectedCharity: charities[0]._id,
       charityContributionPercentage: 15
     }

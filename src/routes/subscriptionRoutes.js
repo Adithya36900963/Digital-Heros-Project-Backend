@@ -4,6 +4,7 @@ import {
   createCheckoutSession,
   createRazorpayOrder,
   manualActivateSubscription,
+  myPayments,
   mySubscription,
   verifyRazorpayPayment
 } from '../controllers/subscriptionController.js';
@@ -15,6 +16,7 @@ export const subscriptionRouter = Router();
 
 subscriptionRouter.use(requireAuth);
 subscriptionRouter.get('/me', mySubscription);
+subscriptionRouter.get('/payments', myPayments);
 subscriptionRouter.post('/checkout-session', validate(subscriptionSchemas.checkout), createCheckoutSession);
 subscriptionRouter.post('/razorpay/order', validate(subscriptionSchemas.razorpayOrder), createRazorpayOrder);
 subscriptionRouter.post('/razorpay/verify', validate(subscriptionSchemas.razorpayVerify), verifyRazorpayPayment);

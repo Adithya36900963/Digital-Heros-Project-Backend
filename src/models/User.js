@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema(
       default: env.minCharityPercentage
     },
     totalWon: { type: Number, default: 0 },
+    isEmailVerified: { type: Boolean, default: false, index: true },
+    emailVerifiedAt: Date,
+    emailVerificationTokenHash: { type: String, select: false },
+    emailVerificationExpiresAt: Date,
     lastLoginAt: Date
   },
   { timestamps: true }
