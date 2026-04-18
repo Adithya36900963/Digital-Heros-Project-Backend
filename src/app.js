@@ -8,6 +8,8 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 
 import { env } from './config/env.js';
+
+// Routes
 import { adminRouter } from './routes/adminRoutes.js';
 import { authRouter } from './routes/authRoutes.js';
 import { charityRouter } from './routes/charityRoutes.js';
@@ -16,12 +18,13 @@ import { drawRouter } from './routes/drawRoutes.js';
 import { scoreRouter } from './routes/scoreRoutes.js';
 import { subscriptionRouter } from './routes/subscriptionRoutes.js';
 import { winnerRouter } from './routes/winnerRoutes.js';
+
+// Error middleware
 import { errorHandler, notFound } from './middleware/error.js';
 
-/* ✅ CREATE APP FIRST */
 export const app = express();
 
-/* ---------------------- CORS ---------------------- */
+/* ---------------- CORS ---------------- */
 
 const allowedOrigins = [
   env.clientUrl,
@@ -36,34 +39,13 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(null, true); // allow Render testing
+      callback(null, true); // allow Render / testing
     }
   },
   credentials: true
 }));
 
-/* ---------------------- SWAGGER ---------------------- */
-
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Digital Heroes API',
-      version: '1.0.0'
-    },
-    servers: [
-      {
-        url: process.env.RENDER_EXTERNAL_URL ||
-             `http://localhost:${env.port || 3000}`
-      }
-    ]
-  },
-  apis: ['./routes/**/*.js']
-};
-
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-
-/* ---------------------- MIDDLEWARE ---------------------- */
+/* ---------------- BASIC MIDDLEWARE ---------------- */
 
 app.use(helmet());
 app.use(express.json({ limit: '1mb' }));
@@ -75,16 +57,41 @@ app.use(rateLimit({
   max: 300
 }));
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.use('/uploads', express.static(path.resolve('uploads')));
-
-/* ---------------------- HEALTH CHECK ---------------------- */
+/* ---------------- HEALTH CHECK (IMPORTANT) ---------------- */
 
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, status: 'ok' });
+  res.json({
+    success: true,
+    status: 'ok',
+    env: env.nodeEnv
+  });
 });
 
-/* ---------------------- ROUTES ---------------------- */
+/* ---------------- SWAGGER ---------------- */
+
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Digital Heroes API',
+      version: '1.0.0'
+    },
+    servers: [
+      {
+        url: env.nodeEnv === 'production'
+          ? 'https://digital-heroes-backend.onrender.com'
+          : `http://localhost:${env.port}`
+      }
+    ]
+  },
+  apis: ['./routes/**/*.js']
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+/* ---------------- ROUTES ---------------- */
 
 app.use('/api/auth', authRouter);
 app.use('/api/dashboard', dashboardRouter);
@@ -95,7 +102,11 @@ app.use('/api/draws', drawRouter);
 app.use('/api/winners', winnerRouter);
 app.use('/api/admin', adminRouter);
 
-/* ---------------------- ERROR HANDLING ---------------------- */
+/* ---------------- STATIC FILES ---------------- */
+
+app.use('/uploads', express.static(path.resolve('uploads')));
+
+/* ---------------- ERROR HANDLING (LAST) ---------------- */
 
 app.use(notFound);
 app.use(errorHandler);
