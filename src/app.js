@@ -18,6 +18,13 @@ import { subscriptionRouter } from './routes/subscriptionRoutes.js';
 import { winnerRouter } from './routes/winnerRoutes.js';
 import { errorHandler, notFound } from './middleware/error.js';
 
+const cors = require("cors");
+
+app.use(cors({
+  origin: "*",
+  methods: ["GET","POST","PUT","DELETE"],
+  credentials: true
+}));
 export const app = express();
 
 const allowedOrigins = new Set([
