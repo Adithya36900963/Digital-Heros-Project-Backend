@@ -11,6 +11,33 @@ export const listUsers = asyncHandler(async (req, res) => {
   res.json({ success: true, users });
 });
 
+export const listSubscriptions = asyncHandler(async (req, res) => {
+  const subscriptions = await Subscription.find()
+    .populate('user', 'name email role status')
+    .populate('charity')
+    .sort({ createdAt: -1 });
+
+  res.json({ success: true, subscriptions });
+});
+
+export const updateSubscription = asyncHandler(async (req, res) => {
+  const allowed = ['status', 'currentPeriodEnd'];
+  const patch = {};
+
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) patch[key] = req.body[key];
+  }
+
+  if (patch.currentPeriodEnd) patch.currentPeriodEnd = new Date(patch.currentPeriodEnd);
+
+  const subscription = await Subscription.findByIdAndUpdate(req.params.id, patch, {
+    new: true,
+    runValidators: true
+  }).populate('user', 'name email').populate('charity');
+
+  res.json({ success: true, subscription });
+});
+
 export const updateUser = asyncHandler(async (req, res) => {
   const allowed = ['name', 'status', 'role', 'selectedCharity', 'charityContributionPercentage', 'country', 'phone'];
   const patch = {};
