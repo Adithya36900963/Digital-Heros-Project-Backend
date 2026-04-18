@@ -51,8 +51,8 @@ async function seed() {
   const [admin, user] = await User.insertMany([
     {
       name: 'Digital Heroes Admin',
-      email: 'admin@digitalheroes.local',
-      passwordHash: await User.hashPassword('Admin123!'),
+      email: '23bq1a4747@gmail.com',
+      passwordHash: await User.hashPassword('Adi143Rupa@369@'),
       role: 'admin',
       isEmailVerified: true,
       emailVerifiedAt: new Date(),
@@ -60,9 +60,9 @@ async function seed() {
       charityContributionPercentage: 10
     },
     {
-      name: 'Sample Subscriber',
-      email: 'user@digitalheroes.local',
-      passwordHash: await User.hashPassword('User123!'),
+      name: 'Adithya',
+      email: 'adithyaseshuvardhan0963@gmail.com',
+      passwordHash: await User.hashPassword('Adithya@369@'),
       role: 'subscriber',
       isEmailVerified: true,
       emailVerifiedAt: new Date(),
@@ -82,9 +82,8 @@ async function seed() {
   ]);
 
   console.log('Seed complete');
-  console.log('Admin: admin@digitalheroes.local / Admin123!');
-  console.log('User: user@digitalheroes.local / User123!');
-  console.log(`Admin id: ${admin._id}`);
+  
+
 
   await mongoose.disconnect();
 }
