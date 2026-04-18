@@ -1,0 +1,9 @@
+MongoDB connected: digital_heroes
+Digital Heroes API running on http://localhost:5000
+[0mPOST /api/auth/login [32m200[0m 611.163 ms - 429[0m
+[0mPOST /api/subscriptions/razorpay/order [32m200[0m 8.714 ms - 219[0m
+[0mPOST /api/auth/login [32m200[0m 555.472 ms - 429[0m
+[0mPOST /api/subscriptions/razorpay/order [32m200[0m 5.933 ms - 219[0m
+[0mPOST /api/auth/login [32m200[0m 520.779 ms - 429[0m
+[0mGET /api/dashboard/me [32m200[0m 40.936 ms - 3350[0m
+[0mPOST /api/subscriptions/razorpay/order [32m200[0m 4.969 ms - 219[0m
