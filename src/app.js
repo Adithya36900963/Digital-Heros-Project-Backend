@@ -1,5 +1,5 @@
-import cors from 'cors';
 import express from 'express';
+import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
@@ -18,70 +18,74 @@ import { subscriptionRouter } from './routes/subscriptionRoutes.js';
 import { winnerRouter } from './routes/winnerRoutes.js';
 import { errorHandler, notFound } from './middleware/error.js';
 
-const cors = require("cors");
-
-app.use(cors({
-  origin: "*",
-  methods: ["GET","POST","PUT","DELETE"],
-  credentials: true
-}));
+/* ✅ CREATE APP FIRST */
 export const app = express();
 
-const allowedOrigins = new Set([
+/* ---------------------- CORS ---------------------- */
+
+const allowedOrigins = [
   env.clientUrl,
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:3000',
   'http://127.0.0.1:3000'
-]);
+];
 
-/* ---------------------- SWAGGER CONFIG ---------------------- */
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // allow Render testing
+    }
+  },
+  credentials: true
+}));
+
+/* ---------------------- SWAGGER ---------------------- */
+
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'Digital Heroes API',
-      version: '1.0.0',
-      description: 'API documentation for Digital Heroes backend',
+      version: '1.0.0'
     },
     servers: [
       {
-        url: `http://localhost:${env.port || 3000}`,
-      },
-    ],
+        url: process.env.RENDER_EXTERNAL_URL ||
+             `http://localhost:${env.port || 3000}`
+      }
+    ]
   },
-  apis: ['./routes/**/*.js'], // supports nested route files
+  apis: ['./routes/**/*.js']
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
-/* ----------------------------------------------------------- */
+
+/* ---------------------- MIDDLEWARE ---------------------- */
 
 app.use(helmet());
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true
-}));
-
-// ✅ Swagger BEFORE rate limiter (so docs won't get blocked)
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300
+}));
 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/uploads', express.static(path.resolve('uploads')));
 
 /* ---------------------- HEALTH CHECK ---------------------- */
+
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, status: 'ok', service: 'digital-heroes-backend' });
+  res.json({ success: true, status: 'ok' });
 });
 
 /* ---------------------- ROUTES ---------------------- */
+
 app.use('/api/auth', authRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/scores', scoreRouter);
@@ -92,5 +96,6 @@ app.use('/api/winners', winnerRouter);
 app.use('/api/admin', adminRouter);
 
 /* ---------------------- ERROR HANDLING ---------------------- */
+
 app.use(notFound);
 app.use(errorHandler);
