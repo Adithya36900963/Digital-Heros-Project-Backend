@@ -9,7 +9,7 @@ import { User } from '../models/User.js';
 
 async function prepareDraw({ month, year, logic }) {
   const winningNumbers = await generateWinningNumbers(logic);
-  const entries = await findEligibleEntries(winningNumbers);
+  const entries = await findEligibleEntries({ winningNumbers, month, year });
   const matchBuckets = {
     '5-match': entries.filter((entry) => entry.matchCount >= 5),
     '4-match': entries.filter((entry) => entry.matchCount === 4),

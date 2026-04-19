@@ -39,8 +39,15 @@ export async function generateWinningNumbers(logic) {
   return [...picked].sort((a, b) => a - b);
 }
 
-export async function findEligibleEntries(winningNumbers) {
-  const activeSubscriptions = await Subscription.find({ status: 'active' }).select('user');
+export async function findEligibleEntries({ winningNumbers, month, year }) {
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(year, month, 1));
+
+  const activeSubscriptions = await Subscription.find({
+    status: 'active',
+    currentPeriodStart: { $lt: end },
+    currentPeriodEnd: { $gte: start }
+  }).select('user');
   const activeUserIds = activeSubscriptions.map((subscription) => subscription.user);
 
   const scores = await Score.find({ user: { $in: activeUserIds } })
@@ -54,10 +61,12 @@ export async function findEligibleEntries(winningNumbers) {
     if (grouped.get(key).length < 5) grouped.get(key).push(score.value);
   }
 
-  return [...grouped.entries()].map(([userId, values]) => {
-    const matchedNumbers = values.filter((value) => winningNumbers.includes(value));
-    return { userId, values, matchedNumbers, matchCount: matchedNumbers.length };
-  });
+  return [...grouped.entries()]
+    .filter(([, values]) => values.length === 5)
+    .map(([userId, values]) => {
+      const matchedNumbers = [...new Set(values.filter((value) => winningNumbers.includes(value)))];
+      return { userId, values, matchedNumbers, matchCount: matchedNumbers.length };
+    });
 }
 
 export function buildPrizeTiers({ totalPrizePool, jackpotRolloverIn, matchBuckets }) {

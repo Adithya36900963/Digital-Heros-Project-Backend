@@ -22,6 +22,9 @@ export const uploadWinnerProof = asyncHandler(async (req, res) => {
 
   winner.proof = { url: `/uploads/proofs/${req.file.filename}`, uploadedAt: new Date() };
   winner.verificationStatus = 'pending';
+  winner.verificationNote = undefined;
+  winner.reviewedBy = undefined;
+  winner.reviewedAt = undefined;
   await winner.save();
 
   res.json({ success: true, winner });
@@ -30,6 +33,7 @@ export const uploadWinnerProof = asyncHandler(async (req, res) => {
 export const reviewWinner = asyncHandler(async (req, res) => {
   const winner = await Winner.findById(req.validated.params.id);
   if (!winner) throw new ApiError(404, 'Winner record not found');
+  if (!winner.proof?.url) throw new ApiError(409, 'Winner proof must be uploaded before review');
 
   winner.verificationStatus = req.validated.body.status;
   winner.verificationNote = req.validated.body.note;
