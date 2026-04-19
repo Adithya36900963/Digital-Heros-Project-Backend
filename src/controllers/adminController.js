@@ -1,6 +1,7 @@
 import { Charity } from '../models/Charity.js';
 import { Donation } from '../models/Donation.js';
 import { Draw } from '../models/Draw.js';
+import { LoginHistory } from '../models/LoginHistory.js';
 import { Subscription } from '../models/Subscription.js';
 import { User } from '../models/User.js';
 import { Winner } from '../models/Winner.js';
@@ -18,6 +19,27 @@ export const listSubscriptions = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 });
 
   res.json({ success: true, subscriptions });
+});
+
+export const listLoginHistory = asyncHandler(async (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
+  const filter = {};
+
+  if (req.query.userId) {
+    const userId = String(req.query.userId);
+    if (!/^[a-f\d]{24}$/i.test(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid userId filter' });
+    }
+    filter.user = userId;
+  }
+  if (req.query.email) filter.userEmail = String(req.query.email).toLowerCase();
+
+  const logins = await LoginHistory.find(filter)
+    .populate('user', 'name email role status')
+    .sort({ loginAt: -1 })
+    .limit(limit);
+
+  res.json({ success: true, logins });
 });
 
 export const updateSubscription = asyncHandler(async (req, res) => {

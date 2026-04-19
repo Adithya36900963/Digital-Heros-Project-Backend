@@ -1,4 +1,5 @@
 import { User } from '../models/User.js';
+import { LoginHistory } from '../models/LoginHistory.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { signToken } from '../utils/tokens.js';
@@ -7,6 +8,7 @@ import {
   hashEmailVerificationToken,
   sendVerificationEmail
 } from '../services/verificationService.js';
+import { recordSuccessfulLogin } from '../services/loginHistoryService.js';
 
 function userResponse(user) {
   return {
@@ -59,8 +61,18 @@ export const login = asyncHandler(async (req, res) => {
 
   user.lastLoginAt = new Date();
   await user.save();
+  await recordSuccessfulLogin({ req, user, source: 'password' });
 
   res.json({ success: true, token: signToken(user), user: userResponse(user) });
+});
+
+export const myLoginHistory = asyncHandler(async (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+  const logins = await LoginHistory.find({ user: req.user._id })
+    .sort({ loginAt: -1 })
+    .limit(limit);
+
+  res.json({ success: true, logins });
 });
 
 export const me = asyncHandler(async (req, res) => {
